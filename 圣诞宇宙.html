@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的梦幻圣诞宇宙 - 共同创造版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&family=Long+Cang&family=Noto+Serif+SC:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #010206; font-family: 'Noto Serif SC', serif; color: white; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        #video-container {
+            position: absolute; top: 20px; right: 20px;
+            width: 160px; height: 120px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 15px; overflow: hidden; background: #000; z-index: 100;
+        }
+        #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .ui-overlay { position: absolute; top: 30px; left: 30px; pointer-events: none; z-index: 10; }
+        .ui-overlay h1 {
+            margin: 0; font-size: 38px; font-weight: 200; letter-spacing: 6px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            font-family: 'Zhi Mang Xing', cursive;
+        }
+        .status-tag {
+            background: rgba(255, 255, 255, 0.03); padding: 8px 22px; border-radius: 30px;
+            font-size: 18px; border: 1px solid rgba(255, 255, 255, 0.2); display: inline-block; margin-top: 15px;
+            letter-spacing: 3px; font-family: 'Long Cang', cursive; min-width: 240px; transition: all 0.8s;
+        }
+
+        #action-panel { position: absolute; top: 140px; left: 30px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
+        .music-btn, .msg-btn {
+            background: rgba(255, 255, 255, 0.1); color: #ffffff; border: 1px solid rgba(255,255,255,0.4);
+            padding: 10px 28px; border-radius: 30px; cursor: pointer; font-size: 15px;
+            transition: all 0.4s; letter-spacing: 4px; backdrop-filter: blur(10px); font-family: 'Long Cang', cursive;
+        }
+        .music-btn:hover, .msg-btn:hover { background: rgba(255, 255, 255, 0.9); color: #010206; transform: scale(1.05); }
+
+        #msg-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8);
+            width: 380px; background: rgba(10, 10, 25, 0.98); border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px; padding: 35px; text-align: center; opacity: 0; visibility: hidden;
+            transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1); z-index: 300;
+        }
+        #msg-modal.active { transform: translate(-50%, -50%) scale(1); opacity: 1; visibility: visible; }
+        #msg-input {
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px; color: white; padding: 15px; font-size: 16px; margin: 20px 0;
+            font-family: 'Noto Serif SC', serif; outline: none; box-sizing: border-box;
+        }
+        .submit-btn {
+            background: #ffffff; color: #010206; border: none; padding: 10px 40px; border-radius: 20px;
+            font-family: 'Long Cang', cursive; cursor: pointer; font-size: 18px;
+        }
+
+        #gift-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.3);
+            width: 480px; background: rgba(5, 5, 12, 0.96); border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 40px; padding: 50px; text-align: center; opacity: 0; visibility: hidden;
+            transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1); z-index: 200; backdrop-filter: blur(25px);
+        }
+        #gift-modal.active { transform: translate(-50%, -50%) scale(1); opacity: 1; visibility: visible; }
+        #gift-emoji { font-size: 90px; margin-bottom: 20px; display: block; filter: drop-shadow(0 0 20px rgba(255,255,255,0.5)); }
+        #gift-text { line-height: 2.2; color: #ffffff; font-size: 20px; font-family: 'Noto Serif SC', serif; text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); }
+
+        #cursor {
+            position: fixed; width: 32px; height: 32px; border: 1px solid white;
+            border-radius: 50%; pointer-events: none; z-index: 999; display: none;
+            box-shadow: 0 0 25px rgba(255,255,255,0.8); transition: transform 0.1s;
+        }
+        .cursor-pinching { border-color: #ffd700; transform: scale(0.7); border-width: 4px; box-shadow: 0 0 40px #ffd700; }
+        .cursor-success { background: rgba(255,215,0,0.4); transform: scale(1.8); }
+    </style>
+</head>
+<body>
+
+    <div class="ui-overlay">
+        <h1>欢迎来到我的圣诞宇宙</h1>
+        <div id="ai-status" class="status-tag">星际链路初始化中...</div>
+    </div>
+
+    <div id="action-panel">
+        <button id="start-audio" class="music-btn">点击开启宇宙旋律</button>
+        <button id="open-msg" class="msg-btn">投递宇宙电波</button>
+    </div>
+
+    <div id="video-container"><video id="webcam" autoplay playsinline></video></div>
+    <div id="cursor"></div>
+
+    <div id="msg-modal">
+        <h2 style="font-family: 'Long Cang'; font-weight: 200; letter-spacing: 2px;">投递你的星际留言</h2>
+        <textarea id="msg-input" placeholder="留下一句想对自己或世界说的话..." rows="3"></textarea>
+        <button id="submit-msg" class="submit-btn">发射到银河</button>
+    </div>
+
+    <div id="gift-modal">
+        <div id="gift-emoji">✨</div>
+        <div id="gift-text"></div>
+        <div style="font-size: 13px; color: #ffffff; margin-top: 40px; letter-spacing: 3px; opacity: 0.4; font-family: 'Long Cang';">再次捏合双指放回礼物</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+    <script type="module">
+        import * as THREE from "https://cdn.skypack.dev/three@0.128.0";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 配置逻辑
+        let firebaseConfig;
+        try { firebaseConfig = JSON.parse(__firebase_config); } 
+        catch (e) { firebaseConfig = { apiKey: "PLACEHOLDER", authDomain: "PLACEHOLDER", projectId: "PLACEHOLDER", storageBucket: "PLACEHOLDER", messagingSenderId: "PLACEHOLDER", appId: "PLACEHOLDER" }; }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'shared-xmas-universe';
+
+        const baseGifts = [
+            { emoji: "🌱", message: "即便深陷泥泞，也从未真正熄灭过的自我愈合力。" },
+            { emoji: "🕯️", message: "在嘈杂纷繁的世界里，依然能听见内心微弱却清澈的声音。" },
+            { emoji: "🍂", message: "允许所有不如意的事情发生，并能轻拍尘土继续前行的淡然。" },
+            { emoji: "☕", message: "在平淡如水的日常里，依然能敏锐捕捉到微小美好的感知力。" },
+            { emoji: "🌑", message: "在无人知晓的低谷，能给予自己一个温暖拥抱的慈悲。" },
+            { emoji: "🌊", message: "面对不可避免的改变，却能顺流而下、轻盈起舞的柔韧。" },
+            { emoji: "💎", message: "即便受过伤害，依然拥有那种选择去信任与善良的本能。" },
+            { emoji: "🕰️", message: "不被他人的进度条所干扰，坚定守住自己节律的从容。" },
+            { emoji: "🧘", message: "在极致的孤独中，能生发出一颗自给自足、永不荒芜的内心。" },
+            { emoji: "🎭", message: "能洞察他人的隐忍与苦衷，并给予恰到好处沉默的慈悲。" },
+            { emoji: "🎨", message: "坚持把每一件‘无用’却微小的事，做得诗意盎然的纯粹。" },
+            { emoji: "🔭", message: "对生命本身永远怀有赤诚，像从未受过伤一样去探索的热忱。" }
+        ];
+
+        let scene, camera, renderer, clock, mainGroup;
+        let instancedTreeCubes, instancedTreeIcos, instancedBaseCubes, instancedBaseIcos, giftBoxes = [], hitTargets = [];
+        let treeOriginalData = [], baseOriginalData = [];
+        let targetRotationY = 0, isModalOpen = false, audioCtx = null, currentSelectedGift = null;
+        let raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
+        
+        let isScattered = false, scatterLerp = 0, isPinchingGift = false;
+        let rotationTraveled = 0, lastToneTime = 0, noteIndex = 0, snowActive = false, snowTimer = 0, snowParticles, snowMaterial;
+        let ambientParticles, topStar, currentUser = null;
+
+        const MELODY = [261.63, 349.23, 349.23, 392.00, 349.23, 329.63, 293.66, 293.66, 293.66, 392.00, 392.00, 440.00, 392.00, 349.23, 329.63, 261.63, 261.63, 440.00, 440.00, 466.16, 440.00, 392.00, 349.23, 293.66, 261.63, 261.63, 293.66, 392.00, 329.63, 349.23];
+
+        window.onload = async () => {
+            initThree();
+            baseGifts.forEach((data, i) => addGiftToScene(data, i));
+            const signInWithRetry = async (retries = 3) => {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) return await signInWithCustomToken(auth, __initial_auth_token);
+                        else return await signInAnonymously(auth);
+                    } catch (err) { if (i === retries - 1) throw err; }
+                }
+            };
+            try {
+                const cred = await signInWithRetry(); currentUser = cred.user;
+                document.getElementById('ai-status').innerText = "轻挥手部，开启探索...";
+                listenForCloudGifts();
+            } catch (e) { document.getElementById('ai-status').innerText = "宇宙信号较弱，请刷新重试"; }
+            initAI();
+            initUIListeners();
+            animate();
+        };
+
+        function listenForCloudGifts() {
+            if (!currentUser) return;
+            const giftsCol = collection(db, 'artifacts', appId, 'public', 'data', 'userGifts');
+            onSnapshot(giftsCol, (snap) => {
+                snap.docChanges().forEach((change) => {
+                    if (change.type === "added") addGiftToScene(change.doc.data(), giftBoxes.length);
+                });
+            }, (err) => console.error("Firestore error", err));
+        }
+
+        function addGiftToScene(data, index) {
+            const group = new THREE.Group();
+            const color = new THREE.Color().setHSL(Math.random(), 0.7, 0.6);
+            const box = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 1.5), new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.7, metalness: 0.7, roughness: 0.2 }));
+            group.add(box); group.add(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.6), new THREE.MeshBasicMaterial({ color: '#ffffff' })));
+            const hitTarget = new THREE.Mesh(new THREE.SphereGeometry(3.5, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
+            hitTarget.userData.parentGroup = group; group.add(hitTarget); hitTargets.push(hitTarget);
+            const yMin = -5.5, yMax = 14.5; let y = yMin + (index * 1.2); if (y > yMax) y = yMax - (index % 5);
+            const radius = 9.5 * (1 - (y + 5.5) / 24) * 0.85; const angle = index * 2.399;
+            group.position.set(Math.cos(angle) * radius, y, Math.sin(angle) * radius);
+            group.userData = { msgData: data, dist: Math.sqrt(group.position.x**2+group.position.z**2), angle: Math.atan2(group.position.z, group.position.x), baseY: y, isHighlighted: false };
+            giftBoxes.push(group); mainGroup.add(group);
+        }
+
+        function initUIListeners() {
+            const modal = document.getElementById('msg-modal'), input = document.getElementById('msg-input');
+            document.getElementById('open-msg').onclick = () => modal.classList.add('active');
+            document.getElementById('submit-msg').onclick = async () => {
+                if (!currentUser || !input.value.trim()) return;
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'userGifts'), { message: input.value, emoji: "✨", timestamp: serverTimestamp() });
+                    input.value = ""; modal.classList.remove('active');
+                } catch(e) {}
+            };
+            document.getElementById('start-audio').onclick = () => {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                document.getElementById('start-audio').style.display = 'none';
+            };
+        }
+
+        function initThree() {
+            scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x010206, 0.005);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000); camera.position.set(0, 10, 65);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio); document.getElementById('canvas-container').appendChild(renderer.domElement);
+            clock = new THREE.Clock(); mainGroup = new THREE.Group(); scene.add(mainGroup);
+            createTree(); createBase(); createSnow(); createCosmicAmbient(); createTechStar();
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x010206, 3.0));
+            const plight = new THREE.PointLight(0xffffff, 2, 80); plight.position.set(5, 20, 20); scene.add(plight);
+        }
+
+        function createCircleTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d'); const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.5, 'rgba(255,255,255,0.2)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(canvas);
+        }
+
+        function createCosmicAmbient() {
+            const geo = new THREE.BufferGeometry(), pos = new Float32Array(50000*3);
+            for (let i=0; i<50000; i++) {
+                const r = 30+Math.random()*150, a = Math.random()*Math.PI*2, b = Math.random()*Math.PI;
+                pos[i*3] = r*Math.sin(b)*Math.cos(a); pos[i*3+1] = r*Math.sin(b)*Math.sin(a); pos[i*3+2] = r*Math.cos(b);
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            ambientParticles = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.3, color: 0xccccff, map: createCircleTexture(), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+            scene.add(ambientParticles);
+        }
+
+        function createTechStar() {
+            const shape = new THREE.Shape(); const outerRad = 1.6, innerRad = 0.7;
+            for (let i = 0; i < 10; i++) {
+                const r = i % 2 === 0 ? outerRad : innerRad; const a = (i / 10) * Math.PI * 2;
+                const x = Math.cos(a - Math.PI / 2) * r, y = Math.sin(a - Math.PI / 2) * r;
+                if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+            }
+            shape.closePath(); topStar = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.1, bevelEnabled: false }), new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+            topStar.position.set(0, 18.5, 0); mainGroup.add(topStar);
+        }
+
+        function createTree() {
+            const mat = new THREE.MeshPhysicalMaterial({ color: 0xfafaff, metalness: 0.9, roughness: 0.1, emissive: 0x9370db, emissiveIntensity: 0.5, transparent: true, opacity: 0.8 });
+            instancedTreeCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12,0.12,0.12), mat, 12000);
+            instancedTreeIcos = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.12, 0), mat, 12000);
+            const dummy = new THREE.Object3D(); let idx = 0;
+            [{r:8.8,h:5.5,y:-2},{r:7.5,h:4.8,y:1.8},{r:6,h:4.2,y:5},{r:4.5,h:3.8,y:7.8},{r:3,h:3.2,y:10.2},{r:1.4,h:2.5,y:12.2}].forEach(l => {
+                for(let i=0; i<2000; i++){
+                    const h = Math.random(), r = (1-h)*l.r*(0.35+0.65*Math.sqrt(Math.random())), a = Math.random()*Math.PI*2;
+                    dummy.position.set(Math.cos(a)*r, h*l.h+l.y, Math.sin(a)*r); dummy.rotation.set(Math.random()*Math.PI, 0, 0); dummy.updateMatrix();
+                    instancedTreeCubes.setMatrixAt(idx, dummy.matrix); instancedTreeIcos.setMatrixAt(idx, dummy.matrix);
+                    treeOriginalData.push({pos: dummy.position.clone(), rot: dummy.rotation.clone(), dir: dummy.position.clone().normalize().add(new THREE.Vector3(0,0.5,0)).normalize()});
+                    idx++;
+                }
+            });
+            mainGroup.add(instancedTreeCubes); mainGroup.add(instancedTreeIcos);
+        }
+
+        function createBase() {
+            const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0.8, roughness: 0.1, emissive: 0xffffff, emissiveIntensity: 0.2, transparent: true, opacity: 0.9 });
+            instancedBaseCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.15,0.15,0.15), mat, 7000);
+            instancedBaseIcos = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.15, 0), mat, 7000);
+            const dummy = new THREE.Object3D();
+            for(let i=0; i<7000; i++){
+                const a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*11.5;
+                dummy.position.set(Math.cos(a)*r, -6, Math.sin(a)*r); dummy.updateMatrix();
+                instancedBaseCubes.setMatrixAt(i, dummy.matrix); instancedBaseIcos.setMatrixAt(i, dummy.matrix);
+                baseOriginalData.push({pos: dummy.position.clone(), r: r, angle: a});
+            }
+            mainGroup.add(instancedBaseCubes); mainGroup.add(instancedBaseIcos);
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.1, 4.5, 24), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+            trunk.position.y = -3.8; mainGroup.add(trunk);
+        }
+
+        function createSnow() {
+            const geo = new THREE.BufferGeometry(), pos = new Float32Array(2000 * 3);
+            for(let i=0; i<2000; i++) { pos[i*3]=(Math.random()-0.5)*100; pos[i*3+1]=40+Math.random()*40; pos[i*3+2]=(Math.random()-0.5)*50; }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            snowMaterial = new THREE.PointsMaterial({ size: 0.4, color: '#ffffff', map: createCircleTexture(), transparent: true, opacity: 0, blending: THREE.AdditiveBlending });
+            snowParticles = new THREE.Points(geo, snowMaterial); scene.add(snowParticles);
+        }
+
+        async function initAI() {
+            const hands = new window.Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+            hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.75, minTrackingConfidence: 0.75 });
+            let prevX = [0.5, 0.5];
+            hands.onResults((res) => {
+                if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+                    window.lastDetectionTime = Date.now();
+                    const primary = res.multiHandLandmarks[0];
+                    const cursor = document.getElementById('cursor'), statusTag = document.getElementById('ai-status');
+                    cursor.style.display = "block"; cursor.style.left = `${(1 - primary[8].x) * 100}vw`; cursor.style.top = `${primary[8].y * 100}vh`;
+                    targetRotationY = (primary[8].x - 0.5) * Math.PI * 4;
+
+                    // 指令识别判断
+                    const pinching = Math.sqrt((primary[8].x-primary[4].x)**2 + (primary[8].y-primary[4].y)**2) < 0.045;
+                    const extFingers = [8,12,16,20].filter(i => primary[i].y < primary[0].y - 0.05).length;
+
+                    // --- 核心手势逻辑对齐 ---
+                    
+                    // 逻辑 A: 弹窗已开启时的交互
+                    if (isModalOpen) {
+                        if (pinching) {
+                            // 5. 放回礼物
+                            closeModal();
+                            statusTag.innerText = "🌀 祝福已放回宇宙";
+                        }
+                    } 
+                    // 逻辑 B: 弹窗关闭时的交互
+                    else {
+                        // 1/2. 树体形态控制 (仅在不操作礼物盒时有效)
+                        if (!isPinchingGift) {
+                            if (extFingers >= 4) { isScattered = true; statusTag.innerText = "✨ 手掌张开：星际散开"; }
+                            else if (extFingers === 0) { isScattered = false; statusTag.innerText = "🌌 手掌捏合：树体凝聚"; }
+                        }
+
+                        // 3. 选取礼物盒 (双指捏住)
+                        if (pinching) {
+                            isPinchingGift = true;
+                            cursor.classList.add('cursor-pinching');
+                            handleSelectionUpdate(1 - primary[8].x, primary[8].y);
+                            if (currentSelectedGift) statusTag.innerText = "🔒 捏住：已选取礼物";
+                        } 
+                        // 4. 选中开启 (双指张开)
+                        else if (isPinchingGift) {
+                            if (currentSelectedGift) {
+                                openGiftModal(currentSelectedGift.userData);
+                                cursor.classList.add('cursor-success');
+                                setTimeout(() => cursor.classList.remove('cursor-success'), 600);
+                                statusTag.innerText = "🎁 张开：选中开启";
+                            }
+                            isPinchingGift = false;
+                            cursor.classList.remove('cursor-pinching');
+                        }
+                    }
+
+                    // 6. 双手挥动召唤下雪
+                    if (res.multiHandLandmarks.length === 2) {
+                        const moveDist = Math.abs(res.multiHandLandmarks[0][8].x - prevX[0]) + Math.abs(res.multiHandLandmarks[1][8].x - prevX[1]);
+                        if (moveDist > 0.08) { snowActive = true; snowTimer = 240; statusTag.innerText = "❄️ 双手挥动：降雪召唤"; }
+                        prevX[0] = res.multiHandLandmarks[0][8].x; prevX[1] = res.multiHandLandmarks[1][8].x;
+                    }
+                } else { document.getElementById('cursor').style.display = "none"; }
+            });
+            const cam = new window.Camera(document.getElementById('webcam'), { onFrame: async () => await hands.send({ image: document.getElementById('webcam') }), width: 640, height: 480 });
+            cam.start();
+        }
+
+        function handleSelectionUpdate(x, y) {
+            mouse.x = x * 2 - 1; mouse.y = -y * 2 + 1; raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(hitTargets, false);
+            if (hits.length > 0) {
+                const sel = hits[0].object.userData.parentGroup;
+                if (currentSelectedGift !== sel) { if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false; currentSelectedGift = sel; currentSelectedGift.userData.isHighlighted = true; }
+            }
+        }
+
+        function openGiftModal(userData) {
+            isModalOpen = true; const modal = document.getElementById('gift-modal');
+            modal.classList.add('active'); document.getElementById('gift-emoji').innerText = userData.msgData.emoji || "✨";
+            const txt = document.getElementById('gift-text'); txt.innerText = userData.msgData.message;
+        }
+
+        function closeModal() { isModalOpen = false; document.getElementById('gift-modal').classList.remove('active'); if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false; }
+
+        function animate() {
+            requestAnimationFrame(animate); const t = clock.getElapsedTime();
+            mainGroup.rotation.y += (targetRotationY - mainGroup.rotation.y) * 0.08;
+            scatterLerp = THREE.MathUtils.lerp(scatterLerp, isScattered ? 1 : 0, 0.08);
+            if (ambientParticles) ambientParticles.rotation.y += 0.0003;
+            if (topStar) topStar.rotation.y += 0.03;
+            const dummy = new THREE.Object3D();
+            for(let i=0; i<treeOriginalData.length; i++) {
+                const d = treeOriginalData[i]; dummy.position.copy(d.pos).addScaledVector(d.dir, 70*scatterLerp);
+                dummy.rotation.set(d.rot.x+t*scatterLerp, d.rot.y+t*scatterLerp, d.rot.z); dummy.updateMatrix(); 
+                instancedTreeCubes.setMatrixAt(i, dummy.matrix); instancedTreeIcos.setMatrixAt(i, dummy.matrix);
+            }
+            instancedTreeCubes.instanceMatrix.needsUpdate = true; instancedTreeIcos.instanceMatrix.needsUpdate = true;
+            for(let i=0; i<baseOriginalData.length; i++) {
+                const d = baseOriginalData[i], r = d.r*(1+scatterLerp*6);
+                dummy.position.set(Math.cos(d.angle)*r, d.pos.y+Math.sin(d.r*0.4-t*2.5)*0.5*(1-scatterLerp), Math.sin(d.angle)*r);
+                dummy.rotation.set(0, d.angle+t, 0); dummy.updateMatrix(); 
+                instancedBaseCubes.setMatrixAt(i, dummy.matrix); instancedBaseIcos.setMatrixAt(i, dummy.matrix);
+            }
+            instancedBaseCubes.instanceMatrix.needsUpdate = true; instancedBaseIcos.instanceMatrix.needsUpdate = true;
+            if(snowParticles) {
+                snowMaterial.opacity = THREE.MathUtils.lerp(snowMaterial.opacity, (snowActive || snowTimer > 0) ? 0.8 : 0, 0.05);
+                if(snowTimer > 0) snowTimer--; else snowActive = false;
+                const pos = snowParticles.geometry.attributes.position.array;
+                for(let i=0; i<2000; i++) { pos[i*3+1]-=0.15; if(pos[i*3+1]<-15) pos[i*3+1]=40; }
+                snowParticles.geometry.attributes.position.needsUpdate = true;
+            }
+            giftBoxes.forEach((g) => {
+                const d = g.userData; const scatter = 1+scatterLerp*5;
+                g.position.x = THREE.MathUtils.lerp(g.position.x, Math.cos(d.angle)*d.dist*scatter, 0.1);
+                g.position.z = THREE.MathUtils.lerp(g.position.z, Math.sin(d.angle)*d.dist*scatter, 0.1);
+                g.scale.lerp(new THREE.Vector3(d.isHighlighted ? 1.8 : 1, d.isHighlighted ? 1.8 : 1, d.isHighlighted ? 1.8 : 1), 0.1);
+                if (d.isHighlighted) g.children[0].material.emissiveIntensity = 2.0 + Math.sin(t*10);
+            });
+            // 音乐触发
+            rotationTraveled += Math.abs(targetRotationY / 100);
+            if (rotationTraveled > 0.15 && audioCtx && audioCtx.currentTime - lastToneTime > 0.1) {
+                const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(MELODY[noteIndex], audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+1.0);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime+1.0);
+                noteIndex = (noteIndex + 1) % MELODY.length; lastToneTime = audioCtx.currentTime; rotationTraveled = 0;
+            }
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
