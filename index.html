@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的梦幻圣诞宇宙 - 2025 珍藏版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&family=Long+Cang&family=Noto+Serif+SC:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #010206; font-family: 'Noto Serif SC', serif; color: white; touch-action: none; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        #video-container {
+            position: absolute; top: 20px; right: 20px;
+            width: 140px; height: 105px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px; overflow: hidden; background: #000; z-index: 100;
+        }
+        #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .ui-overlay { position: absolute; top: 30px; left: 30px; pointer-events: none; z-index: 10; }
+        .ui-overlay h1 {
+            margin: 0; font-size: clamp(24px, 5vw, 38px); font-weight: 200; letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            font-family: 'Zhi Mang Xing', cursive;
+        }
+        .status-tag {
+            background: rgba(255, 255, 255, 0.05); padding: 8px 20px; border-radius: 30px;
+            font-size: 14px; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block; margin-top: 10px;
+            letter-spacing: 2px; font-family: 'Long Cang', cursive; min-width: 220px;
+            backdrop-filter: blur(8px);
+        }
+
+        #action-panel { position: absolute; bottom: 30px; left: 30px; z-index: 20; display: flex; flex-direction: column; gap: 10px; }
+        .music-btn, .msg-btn, .history-btn {
+            background: rgba(255, 255, 255, 0.1); color: #ffffff; border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 25px; border-radius: 25px; cursor: pointer; font-size: 14px;
+            transition: all 0.3s; letter-spacing: 2px; backdrop-filter: blur(10px); font-family: 'Long Cang', cursive; pointer-events: auto;
+        }
+        .music-btn:hover, .msg-btn:hover, .history-btn:hover { background: #fff; color: #000; }
+
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            width: min(90%, 380px); background: rgba(8, 8, 20, 0.98); border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px; padding: 30px; text-align: center; opacity: 0; visibility: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 300;
+        }
+        .modal.active { transform: translate(-50%, -50%) scale(1); opacity: 1; visibility: visible; }
+        .close-icon { position: absolute; top: 15px; right: 15px; font-size: 24px; cursor: pointer; opacity: 0.5; transition: 0.3s; pointer-events: auto; }
+        .close-icon:hover { opacity: 1; transform: rotate(90deg); }
+
+        #msg-input {
+            width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px; color: white; padding: 12px; font-size: 15px; margin: 20px 0;
+            outline: none; box-sizing: border-box; resize: none; font-family: inherit;
+        }
+
+        #history-modal-content { text-align: left; max-height: 50vh; overflow-y: auto; padding: 10px; margin-top: 10px; }
+        .history-item { border-bottom: 1px solid rgba(255,255,255,0.1); padding: 10px 0; font-size: 13px; opacity: 0.8; }
+
+        #cursor {
+            position: fixed; width: 30px; height: 30px; border: 2px solid white;
+            border-radius: 50%; pointer-events: none; z-index: 999; display: none;
+            transition: transform 0.1s;
+        }
+        .cursor-pinching { border-color: #ffd700; transform: scale(0.6); box-shadow: 0 0 20px #ffd700; }
+        
+        #loading-screen {
+            position: fixed; inset: 0; background: #010206; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .loader { width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div class="loader"></div>
+        <p style="margin-top: 20px; font-family: 'Long Cang'; letter-spacing: 2px;">同步宇宙数据中...</p>
+    </div>
+
+    <div class="ui-overlay">
+        <h1>欢迎来到我的圣诞宇宙</h1>
+        <div id="ai-status" class="status-tag">请挥动手部，开启探索...</div>
+    </div>
+
+    <div id="action-panel">
+        <button id="start-audio" class="music-btn">开启活泼旋律</button>
+        <button id="open-msg" class="msg-btn">投递宇宙电波</button>
+        <button id="open-history" class="history-btn">查看我的足迹</button>
+    </div>
+
+    <div id="video-container"><video id="webcam" autoplay playsinline></video></div>
+    <div id="cursor"></div>
+
+    <div id="msg-modal" class="modal">
+        <div class="close-icon" onclick="toggleModal('msg-modal', false)">×</div>
+        <h2 style="font-family: 'Long Cang'; font-weight: 200;">投递星际电波</h2>
+        <textarea id="msg-input" placeholder="写下一句话，它将成为树上的永久繁星..." rows="3"></textarea>
+        <button id="submit-msg" class="submit-btn" style="background:#fff; color:#000; border:none; padding:10px 30px; border-radius:20px; font-family:'Long Cang'; cursor:pointer;">发射</button>
+    </div>
+
+    <div id="history-modal" class="modal">
+        <div class="close-icon" onclick="toggleModal('history-modal', false)">×</div>
+        <h2 style="font-family: 'Long Cang'; font-weight: 200;">我的宇宙足迹</h2>
+        <div id="history-modal-content">
+            <p style="opacity: 0.5;">暂无发射记录...</p>
+        </div>
+    </div>
+
+    <div id="gift-modal" class="modal" style="background: rgba(5,5,15,0.95); border-radius:30px;">
+        <div id="gift-emoji" style="font-size: 80px; margin-bottom: 20px;">✨</div>
+        <div id="gift-text" style="line-height: 1.8; font-size: 18px;"></div>
+        <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 30px;">🤌 再次捏合 · 收回礼物</p>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+    <script type="module">
+        import * as THREE from "https://cdn.skypack.dev/three@0.128.0";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ==========================================
+        // Firebase 自动配置环境 (RULE 1 & 3)
+        // ==========================================
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : { 
+                apiKey: "AIzaSyAmFk0bujuXndcgR2wTEcJdbdrk0MUC6Tw",
+  authDomain: "christmastree-a0bd8.firebaseapp.com",
+  projectId: "christmastree-a0bd8",
+  storageBucket: "christmastree-a0bd8.firebasestorage.app",
+  messagingSenderId: "166520368642",
+  appId: "1:166520368642:web:40068986e42ffef7d4811b",
+  measurementId: "G-B8NZCNSL3J"
+            };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'xmas-v8-final';
+
+        const PARTICLE_COUNT = 30000; 
+
+        const baseGifts = [
+            { emoji: "🌱", message: "即便深陷泥泞，也从未真正熄灭过的自我愈合力。" },
+            { emoji: "🕯️", message: "在嘈杂纷繁的世界里，依然能听见内心微弱却清澈的声音。" },
+            { emoji: "🍂", message: "允许所有不如意的事情发生，并能轻拍尘土继续前行的淡然。" },
+            { emoji: "☕", message: "在平淡如水的日常里，依然能敏锐捕捉到微小美好的感知力。" },
+            { emoji: "🌑", message: "在无人知晓的低谷，能给予自己一个温暖拥抱的慈悲。" },
+            { emoji: "🌊", message: "面对不可避免的改变，却能顺流而下、轻盈起舞的柔韧。" },
+            { emoji: "💎", message: "即便受过伤害，依然拥有那种选择去信任与善良的本能。" },
+            { emoji: "🕰️", message: "不被他人的进度条所干扰，坚定守住自己节律的从容。" },
+            { emoji: "🧘", message: "在极致的孤独中，能生发出一颗自给自足、永不荒芜的内心。" },
+            { emoji: "🎭", message: "能洞察他人的隐忍与苦衷，并给予恰到好处沉默的慈悲。" },
+            { emoji: "🎨", message: "坚持把每一件‘无用’却微小的事，做得诗意盎然的纯粹。" },
+            { emoji: "🔭", message: "对生命本身永远怀有赤诚，像从未受过伤一样去探索的热忱。" }
+        ];
+
+        let scene, camera, renderer, clock, mainGroup;
+        let instancedTreeCubes, instancedBaseCubes, ribbonMesh;
+        let giftBoxes = [], hitTargets = [], treeOriginalData = [], baseOriginalData = [], textData = [];
+        let targetRotationY = 0, isModalOpen = false, audioCtx = null, currentSelectedGift = null;
+        let raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
+        
+        let textLerp = 0, isTextMode = false, isPinchingGift = false;
+        let snowActive = false, snowTimer = 0, snowParticles, snowMaterial, ambientParticles, topStar;
+        let currentUser = null, musicGain = null;
+
+        // 更加活泼欢快的圣诞旋律 (Jingle Bells 跳跃变奏)
+        const MELODY = [523.25, 659.25, 783.99, 523.25, 659.25, 783.99, 880.00, 783.99, 698.46, 659.25, 523.25, 587.33, 523.25, 783.99, 880.00, 1046.50];
+
+        window.onload = async () => {
+            initThree();
+            baseGifts.forEach((data, i) => addGiftToScene(data, i));
+            
+            const initAuth = async () => {
+                let delay = 1000;
+                for (let i = 0; i < 5; i++) {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                        currentUser = auth.currentUser;
+                        document.getElementById('loading-screen').style.opacity = '0';
+                        setTimeout(() => document.getElementById('loading-screen').remove(), 1000);
+                        listenForGifts();
+                        return;
+                    } catch (err) {
+                        if (i === 4) throw err;
+                        await new Promise(r => setTimeout(r, delay));
+                        delay *= 2;
+                    }
+                }
+            };
+
+            initAuth().catch(e => {
+                console.error("Auth Failed", e);
+                document.getElementById('ai-status').innerText = "星际链路受阻，尝试刷新...";
+            });
+
+            initAI();
+            initUIListeners();
+            animate();
+        };
+
+        function initThree() {
+            scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x010206, 0.005);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1500);
+            camera.position.set(0, 10, 65);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            clock = new THREE.Clock(); mainGroup = new THREE.Group(); scene.add(mainGroup);
+
+            createTreeInstances(); createBase(); createSnow(); createCosmicAmbient(); createStar(); createTextLayout(); createSpiralRibbon();
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x010206, 2.5));
+        }
+
+        function createCircleTexture(color = 'rgba(255,255,255,1)') {
+            const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+            grad.addColorStop(0, color);
+            grad.addColorStop(0.3, 'rgba(200,220,255,0.7)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, 128, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createSpiralRibbon() {
+            ribbonMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.18), new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.8 }), 1200);
+            const dummy = new THREE.Object3D();
+            for(let i=0; i<1200; i++) {
+                const t = i / 1200, angle = t * Math.PI * 2 * 6, radius = 9.5 * (1 - (t * 18 + 2) / 22);
+                dummy.position.set(Math.cos(angle)*radius, t * 18 - 2, Math.sin(angle)*radius);
+                dummy.updateMatrix(); ribbonMesh.setMatrixAt(i, dummy.matrix);
+            }
+            mainGroup.add(ribbonMesh);
+        }
+
+        function createTextLayout() {
+            const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white'; ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center';
+            ctx.fillText('Enjoy the', 128, 50); ctx.fillText('present', 128, 90);
+            const pixels = ctx.getImageData(0,0,256,128).data;
+            for(let i=0; i<PARTICLE_COUNT; i++) {
+                let x, y, found = false;
+                while(!found) {
+                    x = Math.floor(Math.random()*256); y = Math.floor(Math.random()*128);
+                    if(pixels[(y*256+x)*4] > 128) found = true;
+                }
+                textData.push(new THREE.Vector3((x-128)*0.32, (64-y)*0.32 + 5, (Math.random()-0.5)*3.0));
+            }
+        }
+
+        function createTreeInstances() {
+            instancedTreeCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12,0.12,0.12), new THREE.MeshPhysicalMaterial({ color: 0xeeeeff, metalness: 0.9, roughness: 0.1, emissive: 0x9370db, emissiveIntensity: 0.5, transparent: true, opacity: 0.8 }), PARTICLE_COUNT);
+            const dummy = new THREE.Object3D();
+            const layers = [{r:8.8,h:5,y:-2},{r:7.2,h:4.5,y:1.8},{r:5.8,h:4,y:5},{r:4.2,h:3.5,y:7.8},{r:2.8,h:3,y:10.2},{r:1.2,h:2,y:12.2}];
+            let idx = 0;
+            layers.forEach(l => {
+                const per = Math.floor(PARTICLE_COUNT / layers.length);
+                for(let i=0; i<per; i++){
+                    if(idx >= PARTICLE_COUNT) break;
+                    const h = Math.random(), r = (1-h)*l.r*(0.4+0.6*Math.sqrt(Math.random())), a = Math.random()*Math.PI*2;
+                    const pos = new THREE.Vector3(Math.cos(a)*r, h*l.h+l.y, Math.sin(a)*r);
+                    dummy.position.copy(pos); dummy.updateMatrix();
+                    instancedTreeCubes.setMatrixAt(idx, dummy.matrix);
+                    treeOriginalData.push({ pos: pos.clone(), rot: new THREE.Euler(Math.random()*Math.PI, 0, 0) });
+                    idx++;
+                }
+            });
+            while(idx < PARTICLE_COUNT) { treeOriginalData.push({ pos: new THREE.Vector3(0,0,0), rot: new THREE.Euler(0,0,0) }); idx++; }
+            mainGroup.add(instancedTreeCubes);
+        }
+
+        async function initAI() {
+            const hands = new window.Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+            hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+            let prevX = [0.5, 0.5];
+            
+            hands.onResults((res) => {
+                const cursor = document.getElementById('cursor'), status = document.getElementById('ai-status');
+                if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
+                    const h = res.multiHandLandmarks; const primary = h[0];
+                    cursor.style.display = "block"; cursor.style.left = `${(1 - primary[8].x)*100}vw`; cursor.style.top = `${primary[8].y*100}vh`;
+                    targetRotationY = (primary[8].x - 0.5) * Math.PI * 3.5;
+                    updateMusicVolume(0.2); 
+                    
+                    const pinching = Math.sqrt((primary[8].x-primary[4].x)**2 + (primary[8].y-primary[4].y)**2) < 0.045;
+                    
+                    if (isModalOpen) {
+                        if (pinching) { closeModal(); status.innerText = "🌀 🤌 再次捏合：收回礼物"; }
+                    } else {
+                        if (pinching) {
+                            isPinchingGift = true; cursor.classList.add('cursor-pinching');
+                            handleSelectionUpdate(1-primary[8].x, primary[8].y);
+                            status.innerText = "🔒 🤌 捏合：选取礼物中";
+                        } else if (isPinchingGift) {
+                            if (currentSelectedGift) { openGiftModal(currentSelectedGift.userData); status.innerText = "🎁 ✋ 张开：选中开启"; }
+                            isPinchingGift = false; cursor.classList.remove('cursor-pinching');
+                        }
+                        
+                        // --- 强化：头顶比心触发判定 ---
+                        if (h.length === 2) {
+                            const isAbove = h[0][8].y < 0.38 && h[1][8].y < 0.38;
+                            const tipDist = Math.sqrt((h[0][8].x-h[1][8].x)**2 + (h[0][8].y-h[1][8].y)**2);
+                            const thumbDist = Math.sqrt((h[0][4].x-h[1][4].x)**2 + (h[0][4].y-h[1][4].y)**2);
+                            
+                            // 只要双手在头顶区域且指尖相对靠近，即视为比心
+                            if (isAbove && tipDist < 0.22 && thumbDist < 0.22) {
+                                isTextMode = true; status.innerText = "💖 头顶比心：Enjoy present";
+                            } else {
+                                isTextMode = false;
+                            }
+                            if (Math.abs(h[0][8].x - prevX[0]) > 0.15) { snowActive = true; snowTimer = 180; status.innerText = "❄️ 双手挥动：星空降雪"; }
+                        } else {
+                            isTextMode = false;
+                        }
+                    }
+                    prevX[0] = primary[8].x;
+                } else {
+                    cursor.style.display = "none";
+                    updateMusicVolume(0);
+                    isTextMode = false;
+                }
+            });
+            new window.Camera(document.getElementById('webcam'), { onFrame: async()=>await hands.send({image:document.getElementById('webcam')}), width:640, height:480 }).start();
+        }
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new AudioContext(); musicGain = audioCtx.createGain();
+            musicGain.gain.setValueAtTime(0, audioCtx.currentTime); musicGain.connect(audioCtx.destination);
+            let nIdx = 0;
+            setInterval(() => {
+                if (musicGain.gain.value < 0.01) return;
+                const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(MELODY[nIdx], audioCtx.currentTime);
+                g.gain.setValueAtTime(0.2, audioCtx.currentTime); 
+                g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0);
+                osc.connect(g); g.connect(musicGain);
+                osc.start(); osc.stop(audioCtx.currentTime + 1.0);
+                nIdx = (nIdx + 1) % MELODY.length;
+            }, 320); 
+        }
+
+        function updateMusicVolume(vol) { if (musicGain) musicGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.4); }
+
+        async function listenForGifts() {
+            if(!currentUser) return;
+            const giftsCol = collection(db, 'artifacts', appId, 'public', 'data', 'userGifts');
+            onSnapshot(giftsCol, (snap) => {
+                snap.docChanges().forEach(change => {
+                    if(change.type === "added") {
+                        const data = change.doc.data();
+                        if (!giftBoxes.some(g => g.userData.msgData.message === data.message)) addGiftToScene(data, giftBoxes.length);
+                    }
+                });
+            }, (err) => console.error(err));
+
+            onSnapshot(query(giftsCol, orderBy('timestamp', 'desc'), limit(15)), (snap) => {
+                const list = document.getElementById('history-modal-content');
+                list.innerHTML = snap.empty ? "<p style='opacity:0.5'>暂无足迹记录...</p>" : "";
+                snap.docs.forEach(doc => {
+                    const div = document.createElement('div'); div.className = 'history-item';
+                    div.innerText = `✨ ${doc.data().message || "匿名星际祝福"}`;
+                    list.appendChild(div);
+                });
+            }, (err) => console.error(err));
+        }
+
+        function createBase() {
+            instancedBaseCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.15,0.15,0.15), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }), 5000);
+            const dummy = new THREE.Object3D();
+            for(let i=0; i<5000; i++){
+                const a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*12;
+                dummy.position.set(Math.cos(a)*r, -6.5, Math.sin(a)*r); dummy.updateMatrix();
+                instancedBaseCubes.setMatrixAt(i, dummy.matrix);
+                baseOriginalData.push({ pos: dummy.position.clone(), r: r, angle: a });
+            }
+            mainGroup.add(instancedBaseCubes);
+        }
+
+        // --- 修复：星空背景增强回归 ---
+        function createCosmicAmbient() {
+            const geo = new THREE.BufferGeometry(), pos = new Float32Array(40000*3);
+            for(let i=0; i<40000; i++){
+                // 将粒子范围拉近到相机前，避免被雾气吞噬
+                const r = 80 + Math.random()*280, a = Math.random()*Math.PI*2, b = Math.random()*Math.PI;
+                pos[i*3]=r*Math.sin(b)*Math.cos(a); pos[i*3+1]=r*Math.sin(b)*Math.sin(a); pos[i*3+2]=r*Math.cos(b);
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            ambientParticles = new THREE.Points(geo, new THREE.PointsMaterial({ 
+                size: 2.5, color: 0x8888ff, map: createCircleTexture(), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false
+            }));
+            scene.add(ambientParticles);
+        }
+
+        function createStar() {
+            const shape = new THREE.Shape();
+            for(let i=0;i<10;i++){ const r=i%2==0?2.2:1.0, a=(i/10)*Math.PI*2; shape[i==0?'moveTo':'lineTo'](Math.cos(a-Math.PI/2)*r, Math.sin(a-Math.PI/2)*r); }
+            topStar = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {depth:0.25, bevelEnabled:false}), new THREE.MeshBasicMaterial({color:0xffffff}));
+            topStar.position.y = 19.5; mainGroup.add(topStar);
+        }
+
+        function createSnow() {
+            const geo = new THREE.BufferGeometry(), pos = new Float32Array(3000*3);
+            for(let i=0;i<3000;i++){ pos[i*3]=(Math.random()-0.5)*200; pos[i*3+1]=40+Math.random()*40; pos[i*3+2]=(Math.random()-0.5)*120; }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            snowMaterial = new THREE.PointsMaterial({size:1.0, map: createCircleTexture(), color:0xffffff, transparent:true, opacity:0, blending: THREE.AdditiveBlending, depthWrite: false });
+            snowParticles = new THREE.Points(geo, snowMaterial); scene.add(snowParticles);
+        }
+
+        function addGiftToScene(data, index) {
+            const group = new THREE.Group(); const color = new THREE.Color().setHSL((index*0.17)%1, 0.75, 0.65);
+            group.add(new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.6 })));
+            group.add(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.6), new THREE.MeshBasicMaterial({ color: 0xffffff })));
+            const hit = new THREE.Mesh(new THREE.SphereGeometry(3.8), new THREE.MeshBasicMaterial({ visible: false }));
+            hit.userData.parentGroup = group; group.add(hit); hitTargets.push(hit);
+            const y = -5.5 + (index * 1.4), r = 9 * (1 - (y+5.5)/26), a = index * 2.399;
+            group.position.set(Math.cos(a)*r, y, Math.sin(a)*r);
+            group.userData = { msgData: data, angle: a, dist: r, baseY: y, isHighlighted: false };
+            giftBoxes.push(group); mainGroup.add(group);
+        }
+
+        window.toggleModal = (id, show) => { document.getElementById(id).classList.toggle('active', show); isModalOpen = show; };
+        function initUIListeners() {
+            document.getElementById('start-audio').onclick = () => { initAudio(); document.getElementById('start-audio').style.display='none'; };
+            document.getElementById('open-msg').onclick = () => toggleModal('msg-modal', true);
+            document.getElementById('open-history').onclick = () => toggleModal('history-modal', true);
+            document.getElementById('submit-msg').onclick = async () => {
+                const val = document.getElementById('msg-input').value.trim();
+                if(currentUser && val) {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'userGifts'), { message: val, timestamp: serverTimestamp() });
+                    document.getElementById('msg-input').value = ""; toggleModal('msg-modal', false);
+                }
+            };
+        }
+        function handleSelectionUpdate(x, y) {
+            mouse.x = x*2-1; mouse.y = -y*2+1; raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(hitTargets, false);
+            if(hits.length > 0) {
+                const sel = hits[0].object.userData.parentGroup;
+                if(currentSelectedGift !== sel) {
+                    if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false;
+                    currentSelectedGift = sel; currentSelectedGift.userData.isHighlighted = true;
+                }
+            } else { if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false; currentSelectedGift = null; }
+        }
+        function openGiftModal(userData) { isModalOpen = true; const modal = document.getElementById('gift-modal'); modal.classList.add('active'); document.getElementById('gift-text').innerText = userData.msgData.message || "一段静默的宇宙回响"; }
+        function closeModal() { isModalOpen = false; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false; }
+
+        function animate() {
+            requestAnimationFrame(animate); const t = clock.getElapsedTime();
+            mainGroup.rotation.y += (targetRotationY - mainGroup.rotation.y)*0.08;
+            textLerp = THREE.MathUtils.lerp(textLerp, isTextMode ? 1 : 0, 0.06);
+            const dummy = new THREE.Object3D();
+            for(let i=0; i<PARTICLE_COUNT; i++){
+                const d = treeOriginalData[i]; if(!d) continue;
+                const finalPos = new THREE.Vector3().lerpVectors(d.pos, textData[i] || d.pos, textLerp);
+                dummy.position.copy(finalPos); dummy.rotation.set(d.rot.x + t*0.3, 0, 0); dummy.updateMatrix();
+                instancedTreeCubes.setMatrixAt(i, dummy.matrix);
+            }
+            instancedTreeCubes.instanceMatrix.needsUpdate = true;
+
+            for(let i=0; i<baseOriginalData.length; i++) {
+                const d = baseOriginalData[i];
+                dummy.position.set(Math.cos(d.angle)*d.r, -6.5 + Math.sin(d.r*0.4 - t*2)*0.3, Math.sin(d.angle)*d.r);
+                dummy.updateMatrix(); instancedBaseCubes.setMatrixAt(i, dummy.matrix);
+            }
+            instancedBaseCubes.instanceMatrix.needsUpdate = true;
+            if (ribbonMesh) { ribbonMesh.rotation.y += 0.02; ribbonMesh.visible = textLerp < 0.2; }
+            if(ambientParticles) ambientParticles.rotation.y += 0.0003;
+            if(topStar) { topStar.rotation.y += 0.03; topStar.position.y = 19.5 + Math.sin(t*2.5)*0.25; }
+            
+            if(snowParticles) {
+                snowMaterial.opacity = THREE.MathUtils.lerp(snowMaterial.opacity, (snowActive || snowTimer > 0) ? 0.95 : 0, 0.05);
+                if(snowTimer > 0) snowTimer--; else snowActive = false;
+                const pos = snowParticles.geometry.attributes.position.array;
+                for(let i=0;i<3000;i++){ pos[i*3+1]-=0.22; if(pos[i*3+1]<-25) pos[i*3+1]=45; }
+                snowParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            giftBoxes.forEach(g => {
+                const d = g.userData;
+                g.scale.lerp(new THREE.Vector3(d.isHighlighted ? 1.7 : 1, d.isHighlighted ? 1.7 : 1, d.isHighlighted ? 1.7 : 1), 0.1);
+                g.visible = textLerp < 0.4;
+                if (d.isHighlighted) g.children[0].material.emissiveIntensity = 2.0 + Math.sin(t*15);
+            });
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
