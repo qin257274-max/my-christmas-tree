@@ -8,155 +8,88 @@
     <style>
         body { margin: 0; overflow: hidden; background-color: #010206; font-family: 'Noto Serif SC', serif; color: white; touch-action: none; }
         #canvas-container { width: 100vw; height: 100vh; display: block; }
-        
-        #video-container {
-            position: absolute; top: 15px; right: 15px;
-            width: 110px; height: 85px;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 10px; overflow: hidden; background: #000; z-index: 100;
-        }
+        #video-container { position: absolute; top: 15px; right: 15px; width: 110px; height: 85px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 10px; overflow: hidden; background: #000; z-index: 100; }
         #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
         .ui-overlay { position: absolute; top: 25px; left: 25px; pointer-events: none; z-index: 10; }
-        .ui-overlay h1 {
-            margin: 0; font-size: clamp(18px, 4vw, 32px); font-weight: 200; letter-spacing: 2px;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.9);
-            font-family: 'Zhi Mang Xing', cursive;
-            color: #ffffff;
-        }
-        .status-tag {
-            background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;
-            font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.2); display: inline-block; margin-top: 8px;
-            letter-spacing: 1px; font-family: 'Long Cang', cursive; min-width: 160px;
-            backdrop-filter: blur(10px);
-            color: #ffd700;
-        }
-
+        .ui-overlay h1 { margin: 0; font-size: clamp(18px, 4vw, 32px); font-weight: 200; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255, 255, 255, 0.9); font-family: 'Zhi Mang Xing', cursive; color: #ffffff; }
+        .status-tag { background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px; font-size: 12px; border: 1px solid rgba(255, 255, 255, 0.2); display: inline-block; margin-top: 8px; letter-spacing: 1px; font-family: 'Long Cang', cursive; min-width: 160px; backdrop-filter: blur(10px); color: #ffd700; }
         #action-panel { position: absolute; bottom: 30px; left: 30px; z-index: 20; display: flex; flex-direction: column; gap: 8px; }
-        .music-btn, .msg-btn, .history-btn {
-            background: rgba(255, 255, 255, 0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.3);
-            padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 13px;
-            transition: all 0.3s; letter-spacing: 1px; backdrop-filter: blur(10px); font-family: 'Long Cang', cursive; pointer-events: auto;
-        }
-        .music-btn:hover, .msg-btn:hover, .history-btn:hover { background: #fff; color: #000; box-shadow: 0 0 15px #fff; }
-
-        .modal {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            width: min(85%, 350px); background: rgba(8, 8, 25, 0.98); border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px; padding: 25px; text-align: center; opacity: 0; visibility: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 300;
-        }
+        .music-btn, .msg-btn, .history-btn { background: rgba(255, 255, 255, 0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.3); padding: 8px 18px; border-radius: 20px; cursor: pointer; font-size: 13px; transition: all 0.3s; letter-spacing: 1px; backdrop-filter: blur(10px); font-family: 'Long Cang', cursive; pointer-events: auto; }
+        .music-btn:hover { background: #fff; color: #000; box-shadow: 0 0 15px #fff; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); width: min(85%, 350px); background: rgba(8, 8, 25, 0.98); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; padding: 25px; text-align: center; opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 300; }
         .modal.active { transform: translate(-50%, -50%) scale(1); opacity: 1; visibility: visible; }
         .close-icon { position: absolute; top: 12px; right: 12px; font-size: 20px; cursor: pointer; opacity: 0.8; pointer-events: auto; }
-
-        #cursor {
-            position: fixed; width: 25px; height: 25px; border: 2px solid white;
-            border-radius: 50%; pointer-events: none; z-index: 999; display: none;
-            transition: transform 0.1s;
-            box-shadow: 0 0 10px #fff;
-        }
+        #cursor { position: fixed; width: 25px; height: 25px; border: 2px solid white; border-radius: 50%; pointer-events: none; z-index: 999; display: none; transition: transform 0.1s; box-shadow: 0 0 10px #fff; }
         .cursor-pinching { border-color: #ffd700; transform: scale(0.6); box-shadow: 0 0 20px #ffd700; }
-        
-        #loading-screen {
-            position: fixed; inset: 0; background: #010206; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
+        #loading-screen { position: fixed; inset: 0; background: #010206; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .loader { width: 35px; height: 35px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #ffd700; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
     <div id="loading-screen">
         <div class="loader"></div>
-        <p id="loading-text" style="margin-top: 15px; font-size: 14px; font-family: 'Long Cang'; letter-spacing: 2px; color: #ffd700;">激活高艳度星际物质...</p>
+        <p id="loading-text" style="margin-top: 15px; font-size: 14px; font-family: 'Long Cang'; letter-spacing: 2px; color: #ffd700;">激活星际链路...</p>
     </div>
-
     <div class="ui-overlay">
         <h1>欢迎来到我的圣诞宇宙</h1>
-        <div id="ai-status" class="status-tag">轻挥手部，开启探索...</div>
+        <div id="ai-status" class="status-tag">请挥动手部，开启探索...</div>
     </div>
-
     <div id="action-panel">
         <button id="start-audio" class="music-btn">开启绚烂旋律</button>
         <button id="open-msg" class="msg-btn">投递宇宙电波</button>
         <button id="open-history" class="history-btn">查看我的足迹</button>
     </div>
-
     <div id="video-container"><video id="webcam" autoplay playsinline muted></video></div>
     <div id="cursor"></div>
-
     <div id="msg-modal" class="modal">
         <div class="close-icon" onclick="toggleModal('msg-modal', false)">×</div>
         <h2 style="font-family: 'Long Cang'; font-weight: 200; margin-top: 0; color: #fff;">投递星际电波</h2>
         <textarea id="msg-input" placeholder="写下一句话，它将成为树上的永久繁星..." rows="3" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); border-radius:10px; color:white; padding:10px; box-sizing:border-box; outline:none; font-family:inherit;"></textarea>
         <button id="submit-msg" class="submit-btn" style="background:#fff; color:#000; border:none; padding:8px 25px; border-radius:20px; font-family:'Long Cang'; cursor:pointer; margin-top:10px;">发射</button>
     </div>
-
     <div id="history-modal" class="modal">
         <div class="close-icon" onclick="toggleModal('history-modal', false)">×</div>
         <h2 style="font-family: 'Long Cang'; font-weight: 200; margin-top: 0; color: #fff;">我的宇宙足迹</h2>
-        <div id="history-modal-content" style="text-align: left; max-height: 40vh; overflow-y: auto; color: #eee;">
-            <p style="opacity: 0.5;">正在调取记录...</p>
-        </div>
+        <div id="history-modal-content" style="text-align: left; max-height: 40vh; overflow-y: auto; color: #eee;"><p style="opacity: 0.5;">正在调取记录...</p></div>
     </div>
-
     <div id="gift-modal" class="modal" style="background: rgba(5,5,15,0.96); border-radius:25px; border-color: #ffd700;">
         <div id="gift-emoji" style="font-size: 60px; margin-bottom: 15px;">✨</div>
         <div id="gift-text" style="line-height: 1.6; font-size: 16px; color: #fff;"></div>
         <p style="font-size: 11px; color: #ffd700; margin-top: 25px; opacity: 0.8;">🤌 再次捏合 · 收回祝福</p>
     </div>
-
     <div id="canvas-container"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- 加载核心库 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.145.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ==========================================
-        // 🛠️ 粘贴位置：填入你的配置
+        // 🛠️ 粘贴位置：填入你的配置信息
         // ==========================================
-        let firebaseConfig;
-        try {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } catch (e) {
-            firebaseConfig = {
-                apiKey: "AIzaSyAmFk0bujuXndcgR2wTEcJdbdrk0MUC6Tw",
-                authDomain: "christmastree-a0bd8.firebaseapp.com",
-                projectId: "christmastree-a0bd8",
-                storageBucket: "christmastree-a0bd8.firebasestorage.app",
-                messagingSenderId: "166520368642",
-                appId: "1:166520368642:web:40068986e42ffef7d4811b"
-            };
-        }
+        const firebaseConfig = {
+            apiKey: "AIzaSyAmFk0bujuXndcgR2wTEcJdbdrk0MUC6Tw",
+  authDomain: "christmastree-a0bd8.firebaseapp.com",
+  projectId: "christmastree-a0bd8",
+  storageBucket: "christmastree-a0bd8.firebasestorage.app",
+  messagingSenderId: "166520368642",
+  appId: "1:166520368642:web:40068986e42ffef7d4811b"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : "xmas-v13-ultimate-wave";
+        const appId = "xmas-v2025-final";
 
-        const PARTICLE_COUNT = 30000; 
-        const randomEmojis = ["🪐", "🌠", "🍭", "🧸", "💎", "🔮", "🧬", "🎐", "🏮", "🛸", "🚀", "🛰️", "🛸", "🦄", "🌈", "🔥", "⚡", "🍀"];
-        
-        const baseGifts = [
-            { emoji: "🌱", message: "即便深陷泥泞，也从未真正熄灭过的自我愈合力。" },
-            { emoji: "🕯️", message: "在嘈杂纷繁的世界里，依然能听见内心微弱却清澈的声音。" },
-            { emoji: "🍂", message: "允许所有不如意的事情发生，并能轻拍尘土继续前行的淡然。" },
-            { emoji: "☕", message: "在平淡如水的日常里，依然能敏锐捕捉到微小美好的感知力。" },
-            { emoji: "🌑", message: "在无人知晓的低谷，能给予自己一个温暖拥抱的慈悲。" },
-            { emoji: "🌊", message: "面对不可避免的改变，却能顺流而下、轻盈起舞的柔韧。" },
-            { emoji: "💎", message: "即便受过伤害，依然拥有那种选择去信任与善良的本能。" },
-            { emoji: "🕰️", message: "不被他人的进度条所干扰，坚定守住自己节律的从容。" },
-            { emoji: "🧘", message: "在极致的孤独中，能生发出一颗自给自足、永不荒芜的内心。" },
-            { emoji: "🎭", message: "能洞察他人的隐忍与苦衷，并给予恰到好处沉默的慈悲。" },
-            { emoji: "🎨", message: "坚持把每一件‘无用’却微小的事，做得诗意盎然的纯粹。" },
-            { emoji: "🔭", message: "对生命本身永远怀有赤诚，像从未受过伤一样去探索的热忱。" }
-        ];
+        const PARTICLE_COUNT = 25000; 
+        const randomEmojis = ["🪐", "🌠", "🍭", "🧸", "💎", "🔮", "🧬", "🎐", "🏮", "🛸", "🚀", "🦄", "🌈", "🔥", "⚡", "🍀"];
+        const baseGifts = [{ emoji: "🌱", message: "即便深陷泥泞，也从未真正熄灭过的自我愈合力。" },{ emoji: "🕯️", message: "在嘈杂纷繁的世界里，依然能听见内心微弱却清澈的声音。" },{ emoji: "🍂", message: "允许所有不如意的事情发生，并能轻拍尘土继续前行的淡然。" },{ emoji: "☕", message: "在平淡如水的日常里，依然能敏锐捕捉到微小美好的感知力。" },{ emoji: "🌑", message: "在无人知晓的低谷，能给予自己一个温暖拥抱的慈悲。" },{ emoji: "🌊", message: "面对不可避免的改变，却能顺流而下、轻盈起舞的柔韧。" },{ emoji: "💎", message: "即便受过伤害，依然拥有那种选择去信任与善良的本能。" },{ emoji: "🕰️", message: "不被他人的进度条所干扰，坚定守住自己节律的从容。" },{ emoji: "🧘", message: "在极致的孤独中，能生发出一颗自给自足、永不荒芜的内心。" },{ emoji: "🎭", message: "能洞察他人的隐忍与苦衷，并给予恰到好处沉默的慈悲。" },{ emoji: "🎨", message: "坚持把每一件‘无用’却微小的事，做得诗意盎然的纯粹。" },{ emoji: "🔭", message: "对生命本身永远怀有赤诚，像从未受过伤一样去探索的热忱。" }];
 
         let scene, camera, renderer, clock, mainGroup;
         let instancedTreeCubes, instancedBaseCubes, ribbonMesh, ambientParticles;
@@ -172,30 +105,30 @@
             initThree();
             baseGifts.forEach((data, i) => addGiftToScene(data, i));
             
+            // 启动 3D 渲染循环
+            animate();
+
+            // 尝试初始化 AI 和 Firebase
             const startSystem = async () => {
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                    currentUser = auth.currentUser;
+                    const cred = await signInAnonymously(auth);
+                    currentUser = cred.user;
                     listenForGifts();
+                } catch (e) { console.log("Firebase not ready"); }
+                
+                try {
                     initAI();
-                    document.getElementById('loading-screen').style.opacity = '0';
-                    setTimeout(() => document.getElementById('loading-screen').remove(), 1000);
-                } catch (e) {
-                    setTimeout(startSystem, 2500);
-                }
+                } catch (e) { console.log("AI not ready"); }
+
+                document.getElementById('loading-screen').style.opacity = '0';
+                setTimeout(() => { if(document.getElementById('loading-screen')) document.getElementById('loading-screen').remove(); }, 1000);
             };
             startSystem();
             initUIListeners();
-            animate();
         };
 
         function initThree() {
-            scene = new THREE.Scene(); 
-            scene.fog = new THREE.FogExp2(0x010206, 0.004);
+            scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x010206, 0.004);
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(0, 10, 65);
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
@@ -203,161 +136,41 @@
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
             document.getElementById('canvas-container').appendChild(renderer.domElement);
             clock = new THREE.Clock(); mainGroup = new THREE.Group(); scene.add(mainGroup);
-
             createTreeInstances(); createBase(); createCosmicAmbient(); createStar(); createTextLayout(); createSpiralRibbon(); createSnowSystem();
-            
             scene.add(new THREE.HemisphereLight(0xffffff, 0x010206, 3.5));
-            const pLight = new THREE.PointLight(0xffffff, 4, 100);
-            pLight.position.set(10, 20, 20);
-            scene.add(pLight);
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
+            const pLight = new THREE.PointLight(0xffffff, 4, 100); pLight.position.set(10, 20, 20); scene.add(pLight);
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
         }
 
-        function createCircleTexture() {
-            const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-            grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.3, 'rgba(180,210,255,0.7)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
-            return new THREE.CanvasTexture(canvas);
-        }
-
-        function createSnowSystem() {
-            const geo = new THREE.BufferGeometry(), pos = new Float32Array(3000*3);
-            for(let i=0;i<3000;i++){ pos[i*3]=(Math.random()-0.5)*180; pos[i*3+1]=40+Math.random()*40; pos[i*3+2]=(Math.random()-0.5)*100; }
-            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            snowMaterial = new THREE.PointsMaterial({size:0.8, map: createCircleTexture(), color:0xffffff, transparent:true, opacity:0, blending: THREE.AdditiveBlending, depthWrite: false });
-            snowParticles = new THREE.Points(geo, snowMaterial); scene.add(snowParticles);
-        }
-
-        function createCosmicAmbient() {
-            const geo = new THREE.BufferGeometry(), pos = new Float32Array(40000*3);
-            for(let i=0; i<40000; i++){
-                const r = 80 + Math.random()*250, a = Math.random()*Math.PI*2, b = Math.random()*Math.PI;
-                pos[i*3]=r*Math.sin(b)*Math.cos(a); pos[i*3+1]=r*Math.sin(b)*Math.sin(a); pos[i*3+2]=r*Math.cos(b);
-            }
-            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-            ambientParticles = new THREE.Points(geo, new THREE.PointsMaterial({ 
-                size: 2.8, color: 0x8888ff, map: createCircleTexture(), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false
-            }));
-            scene.add(ambientParticles);
-        }
-
-        function createTreeInstances() {
-            const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0.1, emissive: 0x9370db, emissiveIntensity: 1.2, transparent: true, opacity: 0.9 });
-            instancedTreeCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12,0.12,0.12), mat, PARTICLE_COUNT);
-            const dummy = new THREE.Object3D();
-            const layers = [{r:8.8,h:5,y:-2},{r:7.2,h:4.5,y:1.8},{r:5.8,h:4,y:5},{r:4.2,h:3.5,y:7.8},{r:2.8,h:3,y:10.2},{r:1.2,h:2,y:12.2}];
-            let idx = 0;
-            layers.forEach(l => {
-                const per = Math.floor(PARTICLE_COUNT / layers.length);
-                for(let i=0; i<per; i++){
-                    if(idx >= PARTICLE_COUNT) break;
-                    const h = Math.random(), r = (1-h)*l.r*(0.4+0.6*Math.sqrt(Math.random())), a = Math.random()*Math.PI*2;
-                    const pos = new THREE.Vector3(Math.cos(a)*r, h*l.h+l.y, Math.sin(a)*r);
-                    dummy.position.copy(pos); dummy.updateMatrix();
-                    instancedTreeCubes.setMatrixAt(idx, dummy.matrix);
-                    treeOriginalData.push({ pos: pos.clone(), rot: new THREE.Euler(Math.random()*Math.PI, 0, 0), dir: pos.clone().normalize().add(new THREE.Vector3(0,0.5,0)).normalize() });
-                    idx++;
-                }
-            });
-            while(idx < PARTICLE_COUNT) { treeOriginalData.push({ pos: new THREE.Vector3(0,0,0), rot: new THREE.Euler(0,0,0), dir: new THREE.Vector3(0,1,0) }); idx++; }
-            mainGroup.add(instancedTreeCubes);
-        }
-
-        function createBase() {
-            instancedBaseCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.15,0.15,0.15), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }), 4000);
-            const dummy = new THREE.Object3D();
-            for(let i=0; i<4000; i++){
-                const a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*12;
-                dummy.position.set(Math.cos(a)*r, -6.5, Math.sin(a)*r); dummy.updateMatrix();
-                instancedBaseCubes.setMatrixAt(i, dummy.matrix);
-                baseOriginalData.push({ pos: dummy.position.clone(), r: r, angle: a });
-            }
-            mainGroup.add(instancedBaseCubes);
-        }
-
-        function createSpiralRibbon() {
-            ribbonMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.2), new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.9 }), 1000);
-            const dummy = new THREE.Object3D();
-            for(let i=0; i<1000; i++) {
-                const t = i / 1000, angle = t * Math.PI * 12, radius = 9.5 * (1 - (t * 18 + 2) / 22);
-                dummy.position.set(Math.cos(angle)*radius, t * 18 - 2, Math.sin(angle)*radius);
-                dummy.updateMatrix(); ribbonMesh.setMatrixAt(i, dummy.matrix);
-            }
-            mainGroup.add(ribbonMesh);
-        }
-
-        function createStar() {
-            const shape = new THREE.Shape();
-            for(let i=0;i<10;i++){ const r=i%2==0?2.5:1.0, a=(i/10)*Math.PI*2; shape[i==0?'moveTo':'lineTo'](Math.cos(a-Math.PI/2)*r, Math.sin(a-Math.PI/2)*r); }
-            const star = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {depth:0.3, bevelEnabled:false}), new THREE.MeshBasicMaterial({color:0xffffff}));
-            star.position.y = 19.5; mainGroup.add(star);
-        }
-
-        function createTextLayout() {
-            const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128;
-            const ctx = canvas.getContext('2d'); ctx.fillStyle = 'white'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center';
-            ctx.fillText('Enjoy the', 128, 50); ctx.fillText('present', 128, 90);
-            const pixels = ctx.getImageData(0,0,256,128).data;
-            for(let i=0; i<PARTICLE_COUNT; i++) {
-                let x, y, found = false;
-                while(!found) { x = Math.floor(Math.random()*256); y = Math.floor(Math.random()*128); if(pixels[(y*256+x)*4] > 128) found = true; }
-                textData.push(new THREE.Vector3((x-128)*0.32, (64-y)*0.32 + 5, (Math.random()-0.5)*2.5));
-            }
-        }
+        function createCircleTexture() { const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64; const ctx = canvas.getContext('2d'); const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32); grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.3, 'rgba(180,210,255,0.7)'); grad.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(canvas); }
+        function createSnowSystem() { const geo = new THREE.BufferGeometry(), pos = new Float32Array(3000*3); for(let i=0;i<3000;i++){ pos[i*3]=(Math.random()-0.5)*180; pos[i*3+1]=40+Math.random()*40; pos[i*3+2]=(Math.random()-0.5)*100; } geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); snowMaterial = new THREE.PointsMaterial({size:0.8, map: createCircleTexture(), color:0xffffff, transparent:true, opacity:0, blending: THREE.AdditiveBlending, depthWrite: false }); snowParticles = new THREE.Points(geo, snowMaterial); scene.add(snowParticles); }
+        function createCosmicAmbient() { const geo = new THREE.BufferGeometry(), pos = new Float32Array(40000*3); for(let i=0; i<40000; i++){ const r = 80 + Math.random()*250, a = Math.random()*Math.PI*2, b = Math.random()*Math.PI; pos[i*3]=r*Math.sin(b)*Math.cos(a); pos[i*3+1]=r*Math.sin(b)*Math.sin(a); pos[i*3+2]=r*Math.cos(b); } geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); ambientParticles = new THREE.Points(geo, new THREE.PointsMaterial({ size: 2.8, color: 0x8888ff, map: createCircleTexture(), transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); scene.add(ambientParticles); }
+        function createTreeInstances() { const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0.9, roughness: 0.1, emissive: 0x9370db, emissiveIntensity: 1.2, transparent: true, opacity: 0.9 }); instancedTreeCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12,0.12,0.12), mat, PARTICLE_COUNT); const dummy = new THREE.Object3D(); const layers = [{r:8.8,h:5,y:-2},{r:7.2,h:4.5,y:1.8},{r:5.8,h:4,y:5},{r:4.2,h:3.5,y:7.8},{r:2.8,h:3,y:10.2},{r:1.2,h:2,y:12.2}]; let idx = 0; layers.forEach(l => { const per = Math.floor(PARTICLE_COUNT / layers.length); for(let i=0; i<per; i++){ if(idx >= PARTICLE_COUNT) break; const h = Math.random(), r = (1-h)*l.r*(0.4+0.6*Math.sqrt(Math.random())), a = Math.random()*Math.PI*2; const pos = new THREE.Vector3(Math.cos(a)*r, h*l.h+l.y, Math.sin(a)*r); dummy.position.copy(pos); dummy.updateMatrix(); instancedTreeCubes.setMatrixAt(idx, dummy.matrix); treeOriginalData.push({ pos: pos.clone(), rot: new THREE.Euler(Math.random()*Math.PI, 0, 0), dir: pos.clone().normalize().add(new THREE.Vector3(0,0.5,0)).normalize() }); idx++; } }); while(idx < PARTICLE_COUNT) { treeOriginalData.push({ pos: new THREE.Vector3(0,0,0), rot: new THREE.Euler(0,0,0), dir: new THREE.Vector3(0,1,0) }); idx++; } mainGroup.add(instancedTreeCubes); }
+        function createBase() { instancedBaseCubes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.15,0.15,0.15), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }), 4000); const dummy = new THREE.Object3D(); for(let i=0; i<4000; i++){ const a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random())*12; dummy.position.set(Math.cos(a)*r, -6.5, Math.sin(a)*r); dummy.updateMatrix(); instancedBaseCubes.setMatrixAt(i, dummy.matrix); baseOriginalData.push({ pos: dummy.position.clone(), r: r, angle: a }); } mainGroup.add(instancedBaseCubes); }
+        function createSpiralRibbon() { ribbonMesh = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(0.2), new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.9 }), 1000); const dummy = new THREE.Object3D(); for(let i=0; i<1000; i++) { const t = i / 1000, angle = t * Math.PI * 12, radius = 9.5 * (1 - (t * 18 + 2) / 22); dummy.position.set(Math.cos(angle)*radius, t * 18 - 2, Math.sin(angle)*radius); dummy.updateMatrix(); ribbonMesh.setMatrixAt(i, dummy.matrix); } mainGroup.add(ribbonMesh); }
+        function createStar() { const shape = new THREE.Shape(); for(let i=0;i<10;i++){ const r=i%2==0?2.5:1.0, a=(i/10)*Math.PI*2; shape[i==0?'moveTo':'lineTo'](Math.cos(a-Math.PI/2)*r, Math.sin(a-Math.PI/2)*r); } const star = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {depth:0.3, bevelEnabled:false}), new THREE.MeshBasicMaterial({color:0xffffff})); star.position.y = 19.5; mainGroup.add(star); }
+        function createTextLayout() { const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 128; const ctx = canvas.getContext('2d'); ctx.fillStyle = 'white'; ctx.font = 'bold 26px Arial'; ctx.textAlign = 'center'; ctx.fillText('Enjoy the', 128, 50); ctx.fillText('present', 128, 90); const pixels = ctx.getImageData(0,0,256,128).data; for(let i=0; i<PARTICLE_COUNT; i++) { let x, y, found = false; while(!found) { x = Math.floor(Math.random()*256); y = Math.floor(Math.random()*128); if(pixels[(y*256+x)*4] > 128) found = true; } textData.push(new THREE.Vector3((x-128)*0.32, (64-y)*0.32 + 5, (Math.random()-0.5)*2.5)); } }
 
         async function initAI() {
             const hands = new window.Hands({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
             hands.setOptions({ maxNumHands: 2, modelComplexity: 0, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
             let prevX = [0.5, 0.5];
-            
             hands.onResults((res) => {
                 const cursor = document.getElementById('cursor'), status = document.getElementById('ai-status');
                 if (res.multiHandLandmarks && res.multiHandLandmarks.length > 0) {
                     const h = res.multiHandLandmarks; const primary = h[0];
                     cursor.style.display = "block"; cursor.style.left = `${(1 - primary[8].x)*100}vw`; cursor.style.top = `${primary[8].y*100}vh`;
-                    targetRotationY = (primary[8].x - 0.5) * Math.PI * 3.5;
-                    updateMusicVolume(0.2); 
-                    
+                    targetRotationY = (primary[8].x - 0.5) * Math.PI * 3.5; updateMusicVolume(0.2); 
                     const pinching = Math.sqrt((primary[8].x-primary[4].x)**2 + (primary[8].y-primary[4].y)**2) < 0.055;
                     const getExtCount = (hand) => [8,12,16,20].filter(i => hand[i].y < hand[0].y - 0.08).length;
-
-                    if (isModalOpen) {
-                        if (pinching) { closeModal(); status.innerText = "🌀 🤌 再次捏合：收回祝福"; }
-                    } else {
-                        // 1. 抓取/开启逻辑
-                        if (pinching) {
-                            isPinchingGift = true; cursor.classList.add('cursor-pinching');
-                            handleSelectionUpdate(1-primary[8].x, primary[8].y);
-                        } else if (isPinchingGift) {
-                            if (currentSelectedGift) { openGiftModal(currentSelectedGift.userData); status.innerText = "🎁 ✋ 张开：开启心意"; }
-                            isPinchingGift = false; cursor.classList.remove('cursor-pinching');
-                        }
-                        
-                        // 2. 挥动手势：散开+降雪
+                    if (isModalOpen) { if (pinching) { closeModal(); status.innerText = "🌀 收回祝福"; } } else {
+                        if (pinching) { isPinchingGift = true; cursor.classList.add('cursor-pinching'); handleSelectionUpdate(1-primary[8].x, primary[8].y); } else if (isPinchingGift) { if (currentSelectedGift) { openGiftModal(currentSelectedGift.userData); status.innerText = "🎁 开启心意"; } isPinchingGift = false; cursor.classList.remove('cursor-pinching'); }
                         if (h.length === 2) {
                             const movement = Math.abs(h[0][8].x - prevX[0]) + Math.abs(h[1][8].x - prevX[1]);
-                            const isAbove = h[0][8].y < 0.45 && h[1][8].y < 0.45;
-                            const tipDist = Math.sqrt((h[0][8].x-h[1][8].x)**2 + (h[0][8].y-h[1][8].y)**2);
-                            const thumbDist = Math.sqrt((h[0][4].x-h[1][4].x)**2 + (h[0][4].y-h[1][4].y)**2);
-                            
-                            if (movement > 0.15) {
-                                isScattered = true; snowActive = true; snowTimer = 200;
-                                status.innerText = "❄️ 👋 挥动：星际爆发与降雪";
-                            }
-                            else if (isAbove && tipDist < 0.28 && thumbDist < 0.28) {
-                                isTextMode = true; status.innerText = "💖 Enjoy Present";
-                            } else {
-                                isTextMode = false;
-                                if (getExtCount(h[0]) === 0 && getExtCount(h[1]) === 0) {
-                                    isScattered = false; status.innerText = "🌌 ✊ 握拳：重塑星系";
-                                }
-                            }
+                            const isAbove = h[0][8].y < 0.45 && h[1][8].y < 0.45; const tipDist = Math.sqrt((h[0][8].x-h[1][8].x)**2 + (h[0][8].y-h[1][8].y)**2);
+                            if (movement > 0.15) { isScattered = true; snowActive = true; snowTimer = 200; status.innerText = "❄️ 👋 挥动：星际爆发"; }
+                            else if (isAbove && tipDist < 0.28) { isTextMode = true; status.innerText = "💖 Enjoy Present"; } 
+                            else { isTextMode = false; if (getExtCount(h[0]) === 0 && getExtCount(h[1]) === 0) { isScattered = false; status.innerText = "🌌 ✊ 重塑星系"; } }
                         }
                     }
                     prevX[0] = primary[8].x;
@@ -367,65 +180,24 @@
             cam.start();
         }
 
-        function initAudio() {
-            if (audioCtx) return;
-            const AC = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AC(); musicGain = audioCtx.createGain();
-            musicGain.gain.setValueAtTime(0, audioCtx.currentTime); musicGain.connect(audioCtx.destination);
-            let nIdx = 0;
-            setInterval(() => {
-                if (musicGain.gain.value < 0.01) return;
-                const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(MELODY[nIdx], audioCtx.currentTime);
-                g.gain.setValueAtTime(0.18, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0);
-                osc.connect(g); g.connect(musicGain); osc.start(); osc.stop(audioCtx.currentTime + 1.0);
-                nIdx = (nIdx + 1) % MELODY.length;
-            }, 350); 
-        }
-
+        function initAudio() { if (audioCtx) return; const AC = window.AudioContext || window.webkitAudioContext; audioCtx = new AC(); musicGain = audioCtx.createGain(); musicGain.gain.setValueAtTime(0, audioCtx.currentTime); musicGain.connect(audioCtx.destination); let nIdx = 0; setInterval(() => { if (musicGain.gain.value < 0.01) return; const osc = audioCtx.createOscillator(), g = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(MELODY[nIdx], audioCtx.currentTime); g.gain.setValueAtTime(0.18, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0); osc.connect(g); g.connect(musicGain); osc.start(); osc.stop(audioCtx.currentTime + 1.0); nIdx = (nIdx + 1) % MELODY.length; }, 350); }
         function updateMusicVolume(vol) { if (musicGain) musicGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.4); }
 
         async function listenForGifts() {
             const giftsCol = collection(db, 'artifacts', appId, 'public', 'data', 'userGifts');
-            onSnapshot(giftsCol, (snap) => {
-                snap.docChanges().forEach(change => {
-                    if(change.type === "added") {
-                        const data = change.doc.data();
-                        if (!giftBoxes.some(g => g.userData.msgData.message === data.message)) addGiftToScene(data, giftBoxes.length);
-                    }
-                });
-            });
-            onSnapshot(query(giftsCol, orderBy('timestamp', 'desc'), limit(15)), (snap) => {
-                const list = document.getElementById('history-modal-content');
-                list.innerHTML = snap.empty ? "<p style='opacity:0.5'>暂无足迹记录...</p>" : "";
-                snap.docs.forEach(doc => {
-                    const div = document.createElement('div'); div.className = 'history-item';
-                    div.innerText = `✨ ${doc.data().message || "匿名星际祝福"}`;
-                    list.appendChild(div);
-                });
-            });
+            onSnapshot(giftsCol, (snap) => { snap.docChanges().forEach(change => { if(change.type === "added") { const data = change.doc.data(); if (!giftBoxes.some(g => g.userData.msgData.message === data.message)) addGiftToScene(data, giftBoxes.length); } }); });
+            onSnapshot(query(giftsCol, orderBy('timestamp', 'desc'), limit(15)), (snap) => { const list = document.getElementById('history-modal-content'); list.innerHTML = snap.empty ? "<p style='opacity:0.5'>暂无足迹记录...</p>" : ""; snap.docs.forEach(doc => { const div = document.createElement('div'); div.className = 'history-item'; div.innerText = `✨ ${doc.data().message || "匿名星际祝福"}`; list.appendChild(div); }); });
         }
 
         function addGiftToScene(data, index) {
-            const group = new THREE.Group(); 
-            // 极致鲜艳配色
-            const color = new THREE.Color().setHSL((index*0.17)%1, 1.0, 0.55);
-            // 盒体
-            group.add(new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshStandardMaterial({ 
-                color: color, emissive: color, emissiveIntensity: 2.0, metalness: 0.9, roughness: 0.05 
-            })));
-            // 🛠️ 边框/丝带：设置为高亮纯白色
+            const group = new THREE.Group(); const color = new THREE.Color().setHSL((index*0.17)%1, 1.0, 0.55);
+            group.add(new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5), new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 2.0, metalness: 0.9, roughness: 0.05 })));
             group.add(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.6), new THREE.MeshBasicMaterial({ color: 0xffffff })));
-            
             const hit = new THREE.Mesh(new THREE.SphereGeometry(3.8), new THREE.MeshBasicMaterial({ visible: false }));
             hit.userData.parentGroup = group; group.add(hit); hitTargets.push(hit);
             const y = -5.5 + (index * 1.4), r = 9 * (1 - (y+5.5)/26), a = index * 2.399;
             group.position.set(Math.cos(a)*r, y, Math.sin(a)*r);
-            
-            // 🛠️ 随机生成文字表情
-            const finalEmoji = data.emoji || randomEmojis[Math.floor(Math.random()*randomEmojis.length)];
-            
-            group.userData = { msgData: { ...data, emoji: finalEmoji }, angle: a, dist: r, baseY: y, isHighlighted: false };
+            group.userData = { msgData: { ...data, emoji: data.emoji || randomEmojis[Math.floor(Math.random()*randomEmojis.length)] }, angle: a, dist: r, baseY: y, isHighlighted: false };
             giftBoxes.push(group); mainGroup.add(group);
         }
 
@@ -434,13 +206,7 @@
             document.getElementById('start-audio').onclick = () => { initAudio(); document.getElementById('start-audio').style.display='none'; };
             document.getElementById('open-msg').onclick = () => toggleModal('msg-modal', true);
             document.getElementById('open-history').onclick = () => toggleModal('history-modal', true);
-            document.getElementById('submit-msg').onclick = async () => {
-                const val = document.getElementById('msg-input').value.trim();
-                if(val) {
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'userGifts'), { message: val, timestamp: serverTimestamp() });
-                    document.getElementById('msg-input').value = ""; toggleModal('msg-modal', false);
-                }
-            };
+            document.getElementById('submit-msg').onclick = async () => { const val = document.getElementById('msg-input').value.trim(); if(val) { try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'userGifts'), { message: val, timestamp: serverTimestamp() }); } catch(e){} document.getElementById('msg-input').value = ""; toggleModal('msg-modal', false); } };
         }
 
         function handleSelectionUpdate(x, y) {
@@ -448,19 +214,11 @@
             const hits = raycaster.intersectObjects(hitTargets, false);
             if(hits.length > 0) {
                 const sel = hits[0].object.userData.parentGroup;
-                if(currentSelectedGift !== sel) {
-                    if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false;
-                    currentSelectedGift = sel; currentSelectedGift.userData.isHighlighted = true;
-                }
+                if(currentSelectedGift !== sel) { if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false; currentSelectedGift = sel; currentSelectedGift.userData.isHighlighted = true; }
             } else { if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false; currentSelectedGift = null; }
         }
 
-        function openGiftModal(userData) { 
-            isModalOpen = true; const modal = document.getElementById('gift-modal'); 
-            modal.classList.add('active'); 
-            document.getElementById('gift-emoji').innerText = userData.msgData.emoji;
-            document.getElementById('gift-text').innerText = userData.msgData.message || "一段静默的宇宙回响"; 
-        }
+        function openGiftModal(userData) { isModalOpen = true; const modal = document.getElementById('gift-modal'); modal.classList.add('active'); document.getElementById('gift-emoji').innerText = userData.msgData.emoji; document.getElementById('gift-text').innerText = userData.msgData.message || "回响中..."; }
         function closeModal() { isModalOpen = false; document.querySelectorAll('.modal').forEach(m => m.classList.remove('active')); if(currentSelectedGift) currentSelectedGift.userData.isHighlighted = false; }
 
         function animate() {
@@ -468,47 +226,30 @@
             mainGroup.rotation.y += (targetRotationY - mainGroup.rotation.y)*0.08;
             textLerp = THREE.MathUtils.lerp(textLerp, isTextMode ? 1 : 0, 0.06);
             scatterLerp = THREE.MathUtils.lerp(scatterLerp, isScattered ? 1 : 0, 0.08);
-
             const dummy = new THREE.Object3D();
             for(let i=0; i<PARTICLE_COUNT; i++){
                 const d = treeOriginalData[i]; if(!d) continue;
                 const scatteredPos = d.pos.clone().addScaledVector(d.dir, 75 * scatterLerp);
-                const finalPos = new THREE.Vector3().lerpVectors(scatteredPos, textData[i] || scatteredPos, textLerp);
-                dummy.position.copy(finalPos);
+                dummy.position.copy(new THREE.Vector3().lerpVectors(scatteredPos, textData[i] || scatteredPos, textLerp));
                 dummy.rotation.set(d.rot.x + t*0.3, 0, 0); dummy.updateMatrix();
                 instancedTreeCubes.setMatrixAt(i, dummy.matrix);
             }
             instancedTreeCubes.instanceMatrix.needsUpdate = true;
-
             for(let i=0; i<baseOriginalData.length; i++) {
                 const d = baseOriginalData[i], r = d.r * (1 + scatterLerp * 6);
-                dummy.position.set(Math.cos(d.angle)*r, -6.5 + Math.sin(d.r*0.4 - t*2)*0.3, Math.sin(d.angle)*r);
+                dummy.position.set(Math.cos(d.angle)*d.r, -6.5 + Math.sin(d.r*0.4 - t*2)*0.3, Math.sin(d.angle)*d.r);
                 dummy.updateMatrix(); instancedBaseCubes.setMatrixAt(i, dummy.matrix);
             }
             instancedBaseCubes.instanceMatrix.needsUpdate = true;
-
             if (ribbonMesh) { ribbonMesh.rotation.y += 0.02; ribbonMesh.visible = textLerp < 0.2; }
-            if(ambientParticles) {
-                ambientParticles.rotation.y += 0.0006;
-                ambientParticles.material.color.setHSL(0.66 + Math.sin(t*0.1)*0.05, 0.7, 0.7);
-            }
-            
-            if(snowParticles) {
-                snowMaterial.opacity = THREE.MathUtils.lerp(snowMaterial.opacity, (snowActive || snowTimer > 0) ? 0.95 : 0, 0.05);
-                if(snowTimer > 0) snowTimer--; else snowActive = false;
-                const pos = snowParticles.geometry.attributes.position.array;
-                for(let i=0;i<3000;i++){ pos[i*3+1]-=0.22; if(pos[i*3+1]<-25) pos[i*3+1]=45; }
-                snowParticles.geometry.attributes.position.needsUpdate = true;
-            }
-
+            if(ambientParticles) { ambientParticles.rotation.y += 0.0006; ambientParticles.material.color.setHSL(0.66 + Math.sin(t*0.1)*0.05, 0.7, 0.7); }
+            if(snowParticles) { snowMaterial.opacity = THREE.MathUtils.lerp(snowMaterial.opacity, (snowActive || snowTimer > 0) ? 0.95 : 0, 0.05); if(snowTimer > 0) snowTimer--; else snowActive = false; const pos = snowParticles.geometry.attributes.position.array; for(let i=0;i<3000;i++){ pos[i*3+1]-=0.22; if(pos[i*3+1]<-25) pos[i*3+1]=45; } snowParticles.geometry.attributes.position.needsUpdate = true; }
             giftBoxes.forEach(g => {
                 const d = g.userData, s = 1 + scatterLerp * 4;
                 g.position.x = THREE.MathUtils.lerp(g.position.x, Math.cos(d.angle) * d.dist * s, 0.1);
                 g.position.z = THREE.MathUtils.lerp(g.position.z, Math.sin(d.angle) * d.dist * s, 0.1);
                 g.scale.lerp(new THREE.Vector3(d.isHighlighted ? 1.7 : 1, d.isHighlighted ? 1.7 : 1, d.isHighlighted ? 1.7 : 1), 0.1);
-                g.visible = textLerp < 0.4; 
-                if (d.isHighlighted) g.children[0].material.emissiveIntensity = 4.0 + Math.sin(t*15)*2.5;
-                else g.children[0].material.emissiveIntensity = 1.5;
+                g.visible = textLerp < 0.4; if (d.isHighlighted) g.children[0].material.emissiveIntensity = 4.0 + Math.sin(t*15)*2.5; else g.children[0].material.emissiveIntensity = 1.5;
             });
             renderer.render(scene, camera);
         }
